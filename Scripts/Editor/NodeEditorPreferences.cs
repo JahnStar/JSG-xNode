@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -204,29 +205,74 @@ namespace XNodeEditor {
             }
         }
 
+#region v1.8.7
         /// <summary> Load prefs if they exist. Create if they don't </summary>
-        private static Settings LoadPrefs() {
-            // Create settings if it doesn't exist
-            if (!EditorPrefs.HasKey(lastKey)) {
-                if (lastEditor != null) EditorPrefs.SetString(lastKey, JsonUtility.ToJson(lastEditor.GetDefaultPreferences()));
-                else EditorPrefs.SetString(lastKey, JsonUtility.ToJson(new Settings()));
+        private static Settings LoadPrefs()
+        {
+            // Create the file path
+            string filePath = Path.Combine(Application.dataPath, "Plugins/Unity Editor/xNode/", lastKey + ".json");
+
+            // Read JSON and create Settings object if file exists
+            if (File.Exists(filePath))
+            {
+                string json = File.ReadAllText(filePath);
+                return JsonUtility.FromJson<Settings>(json);
             }
-            return JsonUtility.FromJson<Settings>(EditorPrefs.GetString(lastKey));
+
+            // Create default Settings and save if file doesn't exist
+            else
+            {
+                Settings defaultSettings = lastEditor != null ? lastEditor.GetDefaultPreferences() : new Settings();
+                SavePrefs(lastKey, defaultSettings);
+                return defaultSettings;
+            }
         }
 
         /// <summary> Delete all prefs </summary>
-        public static void ResetPrefs() {
-            if (EditorPrefs.HasKey(lastKey)) EditorPrefs.DeleteKey(lastKey);
-            if (settings.ContainsKey(lastKey)) settings.Remove(lastKey);
+        public static void ResetPrefs()
+        {
+            // Create the file path
+            string filePath = Path.Combine(Application.dataPath, "Plugins/Unity Editor/xNode/", lastKey + ".json");
+
+            // Delete file if it exists
+            if (File.Exists(filePath))
+            {
+                File.Delete(filePath);
+                AssetDatabase.Refresh();
+            }
+
+            // Clear the settings dictionary
+            settings.Remove(lastKey);
             typeColors = new Dictionary<Type, Color>();
+
+            // Verify loaded settings
             VerifyLoaded();
             NodeEditorWindow.RepaintAll();
         }
 
         /// <summary> Save preferences in EditorPrefs </summary>
-        private static void SavePrefs(string key, Settings settings) {
-            EditorPrefs.SetString(key, JsonUtility.ToJson(settings));
+        private static void SavePrefs(string key, Settings settings)
+        {
+            // Create the file path
+            string folderPath = Path.Combine(Application.dataPath, "Plugins/Unity Editor/xNode/");
+            string filePath = Path.Combine(folderPath, key + ".json");
+
+            // Create the folder if it doesn't exist
+            if (!Directory.Exists(folderPath))
+            {
+                Directory.CreateDirectory(folderPath);
+            }
+
+            // Create JSON string
+            string json = JsonUtility.ToJson(settings, true);
+
+            // Write the file
+            File.WriteAllText(filePath, json);
+
+            // Reimport the file into the Assets folder
+            AssetDatabase.ImportAsset(filePath);
         }
+#endregion
 
         /// <summary> Check if we have loaded settings for given key. If not, load them </summary>
         private static void VerifyLoaded() {

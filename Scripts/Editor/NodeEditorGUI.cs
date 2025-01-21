@@ -1,6 +1,5 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using XNodeEditor.Internal;
@@ -14,8 +13,8 @@ namespace XNodeEditor {
         public NodeGraphEditor graphEditor;
         private readonly HashSet<UnityEngine.Object> selectionCache = new();
         private readonly HashSet<XNode.Node> culledNodes = new();
-        /// <summary> 19 if docked, 22 if not </summary>
-        private int topPadding { get { return isDocked() ? 19 : 22; } }
+        /// <summary> before fix: 19 if docked, 22 if not </summary>
+        private int topPadding { get { return isDocked() ? 24 : 27; } } // v1.9.3 fix
         /// <summary> Executed after all other window GUI. Useful if Zoom is ruining your day. Automatically resets after being run.</summary>
         public event Action onLateGUI;
         private static readonly Vector3[] polyLineTempArray = new Vector3[2];
@@ -34,6 +33,7 @@ namespace XNodeEditor {
             DrawSelectionBox();
             DrawTooltip();
             graphEditor.OnGUI();
+            DrawToolbar();
 
             // Run and reset onLateGUI
             if (onLateGUI != null) {
@@ -343,7 +343,20 @@ namespace XNodeEditor {
                 foreach (XNode.NodePort output in node.Outputs) {
                     //Needs cleanup. Null checks are ugly
                     Rect fromRect;
-                    if (!_portConnectionPoints.TryGetValue(output, out fromRect)) continue;
+                    if (!_portConnectionPoints.TryGetValue(output, out fromRect))
+                    {
+                        // continue;
+                        #region v1.8.2
+                        if (node.drawNode) continue;
+                        // Fallback to node position if rect not found
+                        var position = node.position;
+                        // get node width from the attribute
+                        if (!NodeEditorReflection.TryGetAttributeWidth(node.GetType(), out int nodeWidth)) nodeWidth = 100; // handle default width
+                        position.x += nodeWidth - 10;
+                        position.y += 25;
+                        fromRect = new Rect(position, Vector2.zero);
+                        #endregion
+                    }
 
                     Color portColor = graphEditor.GetPortColor(output);
                     GUIStyle portStyle = graphEditor.GetPortStyle(output);
@@ -356,11 +369,33 @@ namespace XNodeEditor {
                         NoodlePath noodlePath = graphEditor.GetNoodlePath(output, input);
                         NoodleStroke noodleStroke = graphEditor.GetNoodleStroke(output, input);
 
+                        #region v1.8.4
+                        XNode.NodeGraph graph = output.node.graph;
+                        if (graph.customNoodlePath != 0) noodlePath = (NoodlePath)(graph.customNoodlePath - 1);
+                        #endregion
+
                         // Error handling
                         if (input == null) continue; //If a script has been updated and the port doesn't exist, it is removed and null is returned. If this happens, return.
                         if (!input.IsConnectedTo(output)) input.Connect(output);
                         Rect toRect;
-                        if (!_portConnectionPoints.TryGetValue(input, out toRect)) continue;
+                        if (!_portConnectionPoints.TryGetValue(input, out toRect))
+                        {
+                            // continue;
+                            #region v1.8.2
+                            // Fallback to connected node position if rect not found
+                            var position = input.node.position;
+                            position.y += 25;
+                            position.x += 5;
+                            toRect = new Rect(position, Vector2.zero);
+                            #region v1.8.3
+                            // Draw a text showing the number of connected inputs
+                            // var endPosition = GridToWindowPosition(new Vector2(toRect.x + toRect.width - 5, toRect.y + toRect.height / 2 - 10f));
+                            // int connectedInputs = input.node.Ports.Count(x => x.direction == XNode.NodePort.IO.Input && x.IsConnected);
+                            // var headerPortCountStyle = new GUIStyle(NodeEditorResources.styles.nodeHeader) { fontSize = (int)(10 / zoom), normal = { textColor = portColor }};
+                            // GUI.Label(new Rect(endPosition.x, endPosition.y, 0, 0), connectedInputs.ToString(), headerPortCountStyle);
+                            #endregion
+                            #endregion
+                        }
 
                         List<Vector2> reroutePoints = output.GetReroutePoints(k);
 
@@ -399,7 +434,6 @@ namespace XNodeEditor {
 
         private void DrawNodes() {
             Event e = Event.current;
-
             if (e.type == EventType.Layout) {
                 selectionCache.Clear();
                 var objs = Selection.objects;
@@ -494,8 +528,26 @@ namespace XNodeEditor {
 
                 //Draw node contents
                 nodeEditor.OnHeaderGUI();
-                nodeEditor.OnBodyGUI();
-
+                // nodeEditor.OnBodyGUI();
+                #region v1.8.2
+                var visibilityIconRect = GUILayoutUtility.GetLastRect();
+                visibilityIconRect.size = new Vector2(16, 16);
+                visibilityIconRect.x -= 8;
+                visibilityIconRect.y += 25;
+                if (node.drawNode)
+                {
+                    nodeEditor.OnBodyGUI();
+                    var cachedNodeRect = GUILayoutUtility.GetLastRect();
+                    visibilityIconRect.y = cachedNodeRect.y + cachedNodeRect.height - 5;
+                }
+                bool newDrawNode = GUI.Toggle(visibilityIconRect, node.drawNode, EditorGUIUtility.IconContent(node.drawNode ? "animationvisibilitytoggleon" : "animationvisibilitytoggleoff"), EditorStyles.label);
+                if (newDrawNode != node.drawNode)
+                {
+                    node.drawNode = newDrawNode;
+                    EditorUtility.SetDirty(Selection.activeObject = node);
+                    nodeEditor.serializedObject.ApplyModifiedProperties();
+                }
+                #endregion
                 //If user changed a value, notify other scripts through onUpdateNode
                 if (EditorGUI.EndChangeCheck()) {
                     if (NodeEditor.onUpdateNode != null) NodeEditor.onUpdateNode(node);
@@ -590,6 +642,132 @@ namespace XNodeEditor {
             Rect rect = new Rect(Event.current.mousePosition - (size), size);
             EditorGUI.LabelField(rect, content, NodeEditorResources.styles.tooltip);
             Repaint();
+        }
+
+        private XNode.Node objectDragHandler; // v1.9.1
+        private void DrawToolbar()
+        {
+            GUILayout.BeginHorizontal(EditorStyles.toolbar, GUILayout.ExpandWidth(true));
+            {
+                GUILayout.Space(2);
+
+                var leftAlignedButtonStyle = new GUIStyle(EditorStyles.toolbarButton) { alignment = TextAnchor.MiddleLeft, fontStyle = FontStyle.Bold }; // v1.8.6
+                // Path toolbar
+                #region v1.8.6
+                if (graph?.parentGraph == graph || graph?.parentGraph?.parentGraph == graph)
+                {
+                    graph.parentGraph = null;
+                    Debug.LogError("Circular reference error in graph hierarchy!");
+                }
+
+                var graphStack = new Stack<XNode.NodeGraph>();
+                XNode.NodeGraph currentGraph = graph;
+                while (currentGraph != null)
+                {
+                    graphStack.Push(currentGraph);
+                    currentGraph = currentGraph.parentGraph;
+                    if (graphStack.Contains(currentGraph))
+                    {
+                        graphStack = new();
+                        GUILayout.Label(new GUIContent("...", "Circular reference detected!"), EditorStyles.helpBox);
+                        graphStack.Push(graph);
+                        break;
+                    }
+                }
+                while (graphStack.Count > 0)
+                {
+                    var _graph = graphStack.Pop();
+                    DrawGraphField(_graph);
+                    if (_graph != graph) GUILayout.Label(">", EditorStyles.boldLabel);
+                }
+                // DrawGraphField(graph); // Removed
+                #endregion
+
+                void DrawGraphField(XNode.NodeGraph graph)
+                {
+                    var buttonContent = new GUIContent(graph.name, EditorGUIUtility.IconContent("d_ScriptableObject Icon").image);
+                    var buttonWidth = leftAlignedButtonStyle.CalcSize(buttonContent).x - 45;
+
+                    if (current != null && current.graph == graph) leftAlignedButtonStyle.fontStyle = FontStyle.Bold;
+                    else leftAlignedButtonStyle.fontStyle = FontStyle.Normal;
+
+                    if (GUILayout.Button(buttonContent, leftAlignedButtonStyle, GUILayout.Width(buttonWidth)))
+                    {
+                        if (current != null && current.graph != graph) current.graph = graph;
+                        Selection.activeObject = graph;
+                        EditorGUIUtility.PingObject(graph);
+                    }
+                }
+
+                GUILayout.Space(10);
+
+                GUILayout.FlexibleSpace();
+
+                #region v1.8.4
+                // Draw CustomNoodleStroke dropdown
+                GUILayout.Label("Noodle", EditorStyles.miniLabel);
+                graph.customNoodlePath = (XNode.NodeGraph.CustomNoodlePath)EditorGUILayout.EnumPopup("", graph.customNoodlePath, GUILayout.Width(64f));
+                #endregion
+
+                // Draw scale bar
+                GUILayout.Label("Scale", EditorStyles.miniLabel);
+                var newZoom = GUILayout.HorizontalSlider(zoom, 1f, 5f, GUILayout.MinWidth(40), GUILayout.MaxWidth(100) );
+                GUILayout.Label(zoom.ToString("0.0#x"), EditorStyles.miniLabel, GUILayout.Width(30));
+                if (Math.Abs(newZoom - zoom) > Mathf.Epsilon) zoom = newZoom;
+            }
+            GUILayout.EndHorizontal();
+
+            #region v1.9.1 - Drag node object
+            HandleSelectionDrag();
+            #endregion
+
+            void HandleSelectionDrag()
+            {
+                var selectedNode = Selection.activeObject as XNode.Node;
+                if (selectedNode) objectDragHandler = selectedNode;
+                if (objectDragHandler)
+                {
+                    GUILayout.Space(9);
+                    GUILayout.BeginHorizontal();
+                    GUILayout.FlexibleSpace();
+
+                    Event evt = Event.current;
+                    GUILayout.Label($"{objectDragHandler.name} ({objectDragHandler.GetType().Name})", EditorStyles.miniLabel); // v1.9.2 - Show node type
+                    Rect dragRect = GUILayoutUtility.GetRect(new GUIContent("Drag node"), GUI.skin.box, GUILayout.Height(19), GUILayout.Width(19));
+                    dragRect.y -= 5;
+                    dragRect.x -= 4;
+                    GUI.Box(dragRect, EditorGUIUtility.IconContent("DotFill"), EditorStyles.miniLabel);
+                    if (dragRect.Contains(evt.mousePosition)) EditorGUIUtility.AddCursorRect(dragRect, MouseCursor.Link);
+
+                    switch (evt.type) {
+                        case EventType.MouseDown:
+                            if (dragRect.Contains(evt.mousePosition)) {
+                                DragAndDrop.PrepareStartDrag();
+                                DragAndDrop.objectReferences = new UnityEngine.Object[] { objectDragHandler };
+                                DragAndDrop.StartDrag("Dragging node: " + objectDragHandler.name);
+                                evt.Use();
+                            }
+                            else objectDragHandler = null;
+                            break;
+                        case EventType.MouseDrag:
+                            if (DragAndDrop.objectReferences.Length > 0) {
+                                currentActivity = NodeActivity.DragNode;
+                                DragAndDrop.visualMode = DragAndDropVisualMode.Copy;
+                                evt.Use();
+                            }
+                            break;
+                        case EventType.MouseUp:
+                            if (DragAndDrop.objectReferences.Length > 0) {
+                                currentActivity = NodeActivity.Idle;
+                                DragAndDrop.AcceptDrag();
+                                evt.Use();
+                            }
+                            objectDragHandler = null;
+                            break;
+                    }
+                    GUILayout.EndHorizontal();
+                }
+            }
         }
     }
 }

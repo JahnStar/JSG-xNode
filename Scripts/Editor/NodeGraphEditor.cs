@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Linq;
+using System.Reflection;
 using UnityEditor;
 using UnityEngine;
+using XNode;
 #if UNITY_2019_1_OR_NEWER && USE_ADVANCED_GENERIC_MENU
 using GenericMenu = XNodeEditor.AdvancedGenericMenu;
 #endif
@@ -194,19 +196,28 @@ namespace XNodeEditor {
 
         /// <summary> Override to display custom tooltips </summary>
         public virtual string GetPortTooltip(XNode.NodePort port) {
-            Type portType = port.ValueType;
-            string tooltip = "";
-            tooltip = portType.PrettyName();
-            if (port.IsOutput) {
-                object obj = port.node.GetValue(port);
-                tooltip += " = " + (obj != null ? obj.ToString() : "null");
+            // Allow tooltips to be overridden or to have their values hidden based on attribute usage
+            // First, a port managed by a DynamicPortList will have a fieldName of "realName X", so we won't find it directly.
+            FieldInfo portFieldInfo = null;
+            string[] fieldNameParts = port.fieldName.Split(' ');
+            if (port.IsDynamic && fieldNameParts.Length == 2) {
+                portFieldInfo = port.node.GetType().GetField(fieldNameParts[0]);
             }
+            // If a port isn't dynamic, doesn't match the format, or we didn't find its field, try getting it directly
+            if (portFieldInfo == null) {
+                portFieldInfo = port.node.GetType().GetField(port.fieldName);
+            }
+
+            // If the fieldInfo is still null, abort mission; otherwise, look for our attribute.
+            OverrideTooltipAttribute attr = null;
+            if (portFieldInfo != null) attr = ((OverrideTooltipAttribute[])portFieldInfo.GetCustomAttributes(typeof(OverrideTooltipAttribute), false)).SingleOrDefault();
+            string tooltip = attr != null && !string.IsNullOrEmpty(attr.tooltip) ? attr.tooltip : port.ValueType.PrettyName();
             return tooltip;
         }
 
         /// <summary> Deal with objects dropped into the graph through DragAndDrop </summary>
         public virtual void OnDropObjects(UnityEngine.Object[] objects) {
-            if (GetType() != typeof(NodeGraphEditor)) Debug.Log("No OnDropObjects override defined for " + GetType());
+            if (GetType() != typeof(NodeGraphEditor)) Debug.LogWarning($"Attempted to drop object in graph. (But no OnDropObjects override defined for {GetType()})"); // v1.9.1
         }
 
         /// <summary> Create a node and save it in the graph asset </summary>

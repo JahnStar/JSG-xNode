@@ -1,7 +1,69 @@
 {
-  "name": "com.github.siccity.xnode",
+  "name": "com.jahnstargames.xnode",
   "description": "xNode provides a set of APIs and an editor interface for creating and editing custom node graphs.",
-  "version": "1.8.0",
+  "version": "1.9.3",
   "unity": "2018.1",
-  "displayName": "xNode"
+  "displayName": "JSG xNode",
+  "author": {
+    "name": "Jahn Star Games",
+    "email": "contact@jahnstar.com",
+    "url": "https://jahnstar.com"
+  },
+  "documentationUrl": "https://github.com/Siccity/xNode/wiki",
+  "changelog": [
+    "Initial: committed on Jul 10, 2023 (v1.8.0) - repo by Siccity",
+    "Added: https://github.com/Siccity/xNode/pull/210",
+    "Added: https://github.com/Siccity/xNode/pull/365",
+    "Added: https://github.com/Siccity/xNode/pull/362",
+    "Added: https://github.com/Siccity/xNode/pull/383",
+    "Added: https://github.com/Siccity/xNode/pull/360",
+    "Added: https://github.com/Siccity/xNode/pull/220",
+    "By Jahn Star",
+    "Added: Support for minimizing nodes - v1.8.2'",
+    "Added: 'region: Hiding connectedInputs count - v1.8.3",
+    "Added: New noodle dropdown on the toolbar - v1.8.4",
+    "Added: Hide port from attribute - v1.8.5",
+    "Added: Parent graph toolbar - v1.8.6",
+    "Added: Store settings as json in Assets/Plugins/Unity Editor/xNode/ - v1.8.7",
+    "Added: NodeField attribute - v1.8.8",
+    "Added: override label and tooltip - v1.8.9",
+    "Fixed: hide drawNode from build - v1.9.0",
+    "Added: label rect for dragging selected node - v1.9.1",
+    "Added: show node type of drag selected node - v1.9.2",
+    "Fixed: toolbar position - v1.9.3",
+    "Added: new dot texture - v1.9.3"
+  ],
+"samples":
+  [
+    {
+      "displayName": "Logic Toy",
+      "description": "",
+      "path": "Samples~/xNode/LogicToy/"
+    },
+    {
+      "displayName": "Math Graph",
+      "description": "",
+      "path": "Samples~/xNode/MathGraph/"
+    },
+    {
+      "displayName": "Runtime Math Graph",
+      "description": "",
+      "path": "Samples~/xNode/RuntimeMathGraph/"
+    },
+    {
+      "displayName": "State Machine",
+      "description": "",
+      "path": "Samples~/xNode/StateMachine/"
+    },
+    {
+      "displayName": "xNode Dialogue System",
+      "description": "",
+      "path": "Samples~/xNode/xNodeDialogueSystem/"
+    },
+    {
+      "displayName": "Dialogue System",
+      "description": "",
+      "path": "Samples~/xNode/DialogueSystem/"
+    }
+  ]
 }

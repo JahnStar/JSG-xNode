@@ -517,6 +517,11 @@ namespace XNodeEditor {
                 if (draggedOutputTarget != null) gridPoints.Add(portConnectionPoints[draggedOutputTarget].center);
                 else gridPoints.Add(WindowToGridPosition(Event.current.mousePosition));
 
+                #region v1.8.4
+                XNode.NodeGraph graph = this.graph;
+                if (graph.customNoodlePath != 0) path = (NoodlePath)(graph.customNoodlePath - 1);
+                #endregion
+
                 DrawNoodle(gradient, path, stroke, thickness, gridPoints);
 
                 GUIStyle portStyle = NodeEditorWindow.current.graphEditor.GetPortStyle(draggedOutput);

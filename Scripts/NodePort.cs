@@ -19,7 +19,7 @@ namespace XNode {
             }
         }
 
-        public IO direction { 
+        public IO direction {
             get { return _direction; }
             internal set { _direction = value; }
         }
@@ -231,6 +231,7 @@ namespace XNode {
             for (int i = 0; i < connections.Count; i++) {
                 NodePort port = GetConnection(i);
                 if (port != null) result.Add(port);
+                else i--;
             }
             return result;
         }

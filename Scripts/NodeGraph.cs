@@ -6,11 +6,15 @@ namespace XNode {
     /// <summary> Base class for all node graphs </summary>
     [Serializable]
     public abstract class NodeGraph : ScriptableObject {
-
         /// <summary> All nodes in the graph. <para/>
         /// See: <see cref="AddNode{T}"/> </summary>
         [SerializeField] public List<Node> nodes = new List<Node>();
-
+        #region v1.8.4
+        public enum CustomNoodlePath { Default, Curvy, Straight, Angled, ShaderLab }
+        [HideInInspector] public CustomNoodlePath customNoodlePath = CustomNoodlePath.Default;
+        [Header("Graph")] // v1.8.6 - v1.9.3
+        public NodeGraph parentGraph; // v1.8.6
+        #endregion
         /// <summary> Add a node to the graph by type (convenience method - will call the System.Type version) </summary>
         public T AddNode<T>() where T : Node {
             return AddNode(typeof(T)) as T;

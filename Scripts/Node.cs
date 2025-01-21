@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reflection.Emit;
 using UnityEngine;
 
 namespace XNode {
@@ -114,7 +115,11 @@ namespace XNode {
         [SerializeField] public Vector2 position;
         /// <summary> It is recommended not to modify these at hand. Instead, see <see cref="InputAttribute"/> and <see cref="OutputAttribute"/> </summary>
         [SerializeField] private NodePortDictionary ports = new NodePortDictionary();
-
+        #region v1.8.2 => v1.9.0
+        #if UNITY_EDITOR
+        [HideInInspector] public bool drawNode = true;
+		#endif
+        #endregion
         /// <summary> Used during node instantiation to fix null/misconfigured graph during OnEnable/Init. Set it before instantiating a node. Will automatically be unset during OnEnable </summary>
         public static NodeGraph graphHotfix;
 
@@ -272,6 +277,8 @@ namespace XNode {
             public bool instancePortList { get { return dynamicPortList; } set { dynamicPortList = value; } }
             public bool dynamicPortList;
             public TypeConstraint typeConstraint;
+            public string overrideLabel; // v1.8.9
+            public bool hidePort; // v1.8.5
 
             /// <summary> Mark a serializable field as an input port. You can access this through <see cref="GetInputPort(string)"/> </summary>
             /// <param name="backingValue">Should we display the backing value for this port as an editor field? </param>
@@ -295,6 +302,8 @@ namespace XNode {
             public bool instancePortList { get { return dynamicPortList; } set { dynamicPortList = value; } }
             public bool dynamicPortList;
             public TypeConstraint typeConstraint;
+            public string overrideLabel; // v1.8.9
+            public bool hidePort; // v1.8.5
 
             /// <summary> Mark a serializable field as an output port. You can access this through <see cref="GetOutputPort(string)"/> </summary>
             /// <param name="backingValue">Should we display the backing value for this port as an editor field? </param>
@@ -406,7 +415,7 @@ namespace XNode {
 
             public void OnAfterDeserialize() {
                 this.Clear();
-#if UNITY_2021_3_OR_NEWER                
+#if UNITY_2021_3_OR_NEWER
                 this.EnsureCapacity(keys.Count);
 #endif
 

@@ -4,6 +4,8 @@ using UnityEngine;
 namespace XNodeEditor {
     public static class NodeEditorResources {
         // Textures
+        public static Texture2D dotFlat { get { return _dotFlat != null ? _dotFlat : _dotFlat = Resources.Load<Texture2D>("xnode_dot_flat"); } } // v1.9.3
+        private static Texture2D _dotFlat; // v1.9.3
         public static Texture2D dot { get { return _dot != null ? _dot : _dot = Resources.Load<Texture2D>("xnode_dot"); } }
         private static Texture2D _dot;
         public static Texture2D dotOuter { get { return _dotOuter != null ? _dotOuter : _dotOuter = Resources.Load<Texture2D>("xnode_dot_outer"); } }
