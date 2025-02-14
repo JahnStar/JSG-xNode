@@ -38,6 +38,7 @@ namespace XNodeEditor {
             public bool gridSnap = true;
             public bool autoSave = true;
             public bool openOnCreate = true;
+            public bool keepOpen = true; // v1.9.4
             public bool dragToCreate = true;
             public bool createFilter = true;
             public bool zoomToMouse = true;
@@ -156,6 +157,7 @@ namespace XNodeEditor {
             EditorGUILayout.LabelField("System", EditorStyles.boldLabel);
             settings.autoSave = EditorGUILayout.Toggle(new GUIContent("Autosave", "Disable for better editor performance"), settings.autoSave);
             settings.openOnCreate = EditorGUILayout.Toggle(new GUIContent("Open Editor on Create", "Disable to prevent openening the editor when creating a new graph"), settings.openOnCreate);
+            settings.keepOpen = EditorGUILayout.Toggle(new GUIContent("Auto Open", "Automatically open the last graph if the current is null"), settings.keepOpen); // v1.9.4
             if (GUI.changed) SavePrefs(key, settings);
             EditorGUILayout.Space();
         }

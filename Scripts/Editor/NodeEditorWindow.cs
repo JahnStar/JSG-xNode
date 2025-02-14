@@ -4,6 +4,7 @@ using UnityEditor.Callbacks;
 using UnityEngine;
 using System;
 using Object = UnityEngine.Object;
+using System.Linq;
 
 namespace XNodeEditor {
     [InitializeOnLoad]
@@ -68,7 +69,26 @@ namespace XNodeEditor {
 
         public Dictionary<XNode.Node, Vector2> nodeSizes { get { return _nodeSizes; } }
         private Dictionary<XNode.Node, Vector2> _nodeSizes = new Dictionary<XNode.Node, Vector2>();
-        public XNode.NodeGraph graph;
+        public XNode.NodeGraph graph
+        #region v1.9.4
+        {
+            get
+            {
+                if (current_graph != null) return current_graph;
+                else { try { if (!NodeEditorPreferences.GetSettings()?.keepOpen ?? false) return current_graph; } catch { return current_graph; } }
+                _graphHistory?.RemoveAll(x => x == null);
+                return current_graph = _graphHistory?.Count > 0 ? _graphHistory.FirstOrDefault() : null;
+            }
+            set
+            {
+                current_graph = value;
+                if (_graphHistory.Count >= 64) _graphHistory = new();
+                if (value != null && _graphHistory?.FirstOrDefault() != value) _graphHistory.Insert(0, value);
+            }
+        }
+        private XNode.NodeGraph current_graph;
+        private List<XNode.NodeGraph> _graphHistory = new();
+        #endregion
         public Vector2 panOffset { get { return _panOffset; } set { _panOffset = value; Repaint(); } }
         private Vector2 _panOffset;
         public float zoom { get { return _zoom; } set { _zoom = Mathf.Clamp(value, NodeEditorPreferences.GetSettings().minZoom, NodeEditorPreferences.GetSettings().maxZoom); Repaint(); } }
@@ -81,10 +101,10 @@ namespace XNodeEditor {
                 graphEditor.OnWindowFocus();
                 if (NodeEditorPreferences.GetSettings().autoSave) AssetDatabase.SaveAssets();
             }
-            
+
             dragThreshold = Math.Max(1f, Screen.width / 1000f);
         }
-        
+
         void OnLostFocus() {
             if (graphEditor != null) graphEditor.OnWindowFocusLost();
         }

@@ -1,7 +1,7 @@
 {
   "name": "com.jahnstargames.xnode",
   "description": "xNode provides a set of APIs and an editor interface for creating and editing custom node graphs.",
-  "version": "1.9.3",
+  "version": "1.9.4",
   "unity": "2018.1",
   "displayName": "JSG xNode",
   "author": {
@@ -31,7 +31,8 @@
     "Added: label rect for dragging selected node - v1.9.1",
     "Added: show node type of drag selected node - v1.9.2",
     "Fixed: toolbar position - v1.9.3",
-    "Added: new dot texture - v1.9.3"
+    "Added: new dot texture - v1.9.3",
+    "Added: keep open graph setting - v1.9.4"
   ],
 "samples":
   [
