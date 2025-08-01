@@ -1,6 +1,7 @@
 MIT License
 
-Copyright (c) 2017 Thor Brigsted
+Copyright (c) 2017 Thor Brigsted and contributors  
+Copyright (c) 2024 Halil Emre Yıldız (Jahn Star Games)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
