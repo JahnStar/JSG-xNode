@@ -96,6 +96,9 @@ namespace XNodeEditor {
 
         void OnFocus() {
             current = this;
+            
+            if (graph == null && NodeEditorPreferences.GetSettings()?.keepOpen == true) TryAutoOpenGraph();
+
             ValidateGraphEditor();
             if (graphEditor != null) {
                 graphEditor.OnWindowFocus();
@@ -113,6 +116,27 @@ namespace XNodeEditor {
         private static void OnLoad() {
             Selection.selectionChanged -= OnSelectionChanged;
             Selection.selectionChanged += OnSelectionChanged;
+        }
+
+        /// <summary> Try to auto-open a graph from history or find the first available graph </summary>
+        private void TryAutoOpenGraph() {
+            if (_graphHistory != null && _graphHistory.Count > 0) {
+                _graphHistory.RemoveAll(x => x == null);
+                if (_graphHistory.Count > 0) {
+                    graph = _graphHistory.FirstOrDefault();
+                    return;
+                }
+            }
+            
+            // If no history, try to find any NodeGraph in the project
+            string[] guids = AssetDatabase.FindAssets("t:" + typeof(XNode.NodeGraph).Name);
+            if (guids.Length > 0) {
+                string assetPath = AssetDatabase.GUIDToAssetPath(guids[0]);
+                XNode.NodeGraph foundGraph = AssetDatabase.LoadAssetAtPath<XNode.NodeGraph>(assetPath);
+                if (foundGraph != null) {
+                    graph = foundGraph;
+                }
+            }
         }
 
         /// <summary> Handle Selection Change events</summary>
@@ -137,6 +161,12 @@ namespace XNodeEditor {
             NodeEditorWindow w = CreateInstance<NodeEditorWindow>();
             w.titleContent = new GUIContent("xNode");
             w.wantsMouseMove = true;
+            
+            // Auto open feature - check if we should auto-open a graph when window is created
+            if (NodeEditorPreferences.GetSettings()?.keepOpen == true) {
+                w.TryAutoOpenGraph();
+            }
+            
             w.Show();
             return w;
         }
